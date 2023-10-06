@@ -5,9 +5,9 @@ edition = "2021"
 
 [dependencies]
 poly-commit = { version = "0.0.12", default-features = false }
-zkstd = { version = "0.0.13", default-features = false }
+zkstd = { version = "0.0.21", default-features = false }
 
 [dev-dependencies]
 rand = { version = "0.8" }
-bls-12-381 = { version = "0.0.13", default-features = false }
+bls-12-381 = { version = "0.0.21", default-features = false }
 ec-pairing = { version = "0.0.12", default-features = false }

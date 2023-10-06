@@ -1,3 +1,6 @@
+// range proof implementation describe as follows
+// https://hackmd.io/@dabo/B1U4kx8XI#Range-proof-for-the-range-02n
+
 use zkstd::common::PrimeField;
 
 fn binary_check<F: PrimeField>(value: F) -> bool {
@@ -13,13 +16,16 @@ fn binary_check<F: PrimeField>(value: F) -> bool {
         .all(|(bit, bit_prime)| bit * bit_prime == 0)
 }
 
+// describe z as binary representation
+fn z_to_g<F: PrimeField>(z: F) -> Vec<u8> {
+    z.to_bits()
+}
+
 #[cfg(test)]
 mod tests {
     use super::binary_check;
 
     use bls_12_381::Fr as Scalar;
-    use ec_pairing::TatePairing;
-    use poly_commit::KzgParams;
     use rand::rngs::OsRng;
     use zkstd::common::Group;
 
@@ -27,19 +33,5 @@ mod tests {
     fn binary_check_test() {
         let z = Scalar::random(OsRng);
         assert!(binary_check(z))
-    }
-
-    #[test]
-    fn range_proof_test() {
-        // range proof 0 <= z < 256
-        let k = 2;
-        let n = 256;
-        let z = Scalar::from(100);
-
-        // setup kzg params
-        let r = Scalar::random(OsRng);
-        let pp = KzgParams::<TatePairing>::setup(k, r);
-
-        assert!(true)
     }
 }
