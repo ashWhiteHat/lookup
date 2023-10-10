@@ -58,6 +58,22 @@ mod tests {
         F::from(a) + alpha * F::from(b) + alpha.square() * F::from(c)
     }
 
+    fn s<F: PrimeField>(f: &Vec<F>, t: &Vec<F>) -> Vec<F> {
+        let mut s = [f.clone(), t.clone()].concat();
+        s.sort();
+        s
+    }
+
+    // get difference vectors
+    fn diff<F: PrimeField>(s: &Vec<F>) -> Vec<F> {
+        (0..s.len() - 1).map(|i| s[i + 1] - s[i]).collect()
+    }
+
+    // check a ⊂ b
+    fn multiset_check<F: PrimeField>(a: &Vec<F>, b: &Vec<F>) -> bool {
+        a.iter().all(|vector: &F| b.contains(&vector))
+    }
+
     #[test]
     fn table_generation_test() {
         let bit_length = 4;
@@ -83,10 +99,20 @@ mod tests {
         let alpha = Scalar::random(OsRng);
         let mut witness_vectors = witness_vectors(range, alpha);
         let xor_table = XORTable::<Scalar>::precompute();
-        let ti = xor_table.compress(alpha);
+        let mut t = xor_table.compress(alpha);
 
-        assert!(witness_vectors.iter().all(|vector| ti.contains(&vector)));
+        // naive multset check
+        assert!(multiset_check(&witness_vectors, &t));
         witness_vectors[0] += Scalar::one();
-        assert!(!witness_vectors.iter().all(|vector| ti.contains(&vector)));
+        assert!(!multiset_check(&witness_vectors, &t));
+
+        witness_vectors[0] -= Scalar::one();
+        t.sort();
+        let s = s(&witness_vectors, &t);
+        let s_prime = diff(&s);
+        let t_prime = diff(&t);
+
+        // f ⊂ t, s'
+        assert!(multiset_check(&witness_vectors, &[t, s_prime].concat()));
     }
 }
