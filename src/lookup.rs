@@ -111,8 +111,9 @@ mod tests {
         let s = s(&witness_vectors, &t);
         let s_prime = diff(&s);
         let t_prime = diff(&t);
+        let t_2prime = [vec![Scalar::zero()], t_prime].concat();
 
-        // f ⊂ t, s'
-        assert!(multiset_check(&witness_vectors, &[t, s_prime].concat()));
+        // s ⊂ t
+        assert!(multiset_check(&s_prime, &t_2prime));
     }
 }
