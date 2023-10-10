@@ -23,13 +23,13 @@ impl<F: PrimeField> XORTable<F> {
         Self { n, a, b, c }
     }
 
-    pub(crate) fn compress(&self, α: F) -> Vec<F> {
-        let αα = α.square();
+    pub(crate) fn compress(&self, alpha: F) -> Vec<F> {
+        let alpha2 = alpha.square();
         self.a
             .iter()
             .zip(self.b.iter())
             .zip(self.c.iter())
-            .map(|((t1, t2), t3)| *t1 + α * t2 + αα * t3)
+            .map(|((t1, t2), t3)| *t1 + alpha * t2 + alpha2 * t3)
             .collect()
     }
 }
@@ -42,8 +42,20 @@ mod tests {
     use rand::{thread_rng, Rng};
     use zkstd::common::{Group, PrimeField};
 
-    fn compress_witness<F: PrimeField>(a: u64, b: u64, c: u64, α: F) -> F {
-        F::from(a) + α * F::from(b) + α.square() * F::from(c)
+    fn witness_vectors<F: PrimeField>(range: u64, alpha: F) -> Vec<F> {
+        let i = 24;
+        (0..i)
+            .map(|_| {
+                let a = thread_rng().gen_range(0..range);
+                let b = thread_rng().gen_range(0..range);
+                let c = a ^ b;
+                compress_witness(a, b, c, alpha)
+            })
+            .collect()
+    }
+
+    fn compress_witness<F: PrimeField>(a: u64, b: u64, c: u64, alpha: F) -> F {
+        F::from(a) + alpha * F::from(b) + alpha.square() * F::from(c)
     }
 
     #[test]
@@ -68,17 +80,13 @@ mod tests {
     fn lookup_test() {
         let bit_length = 4;
         let range = 1 << bit_length;
-        let a = thread_rng().gen_range(0..range);
-        let b = thread_rng().gen_range(0..range);
-        let c = a ^ b;
-        let d = a + b;
-        let α = Scalar::random(OsRng);
+        let alpha = Scalar::random(OsRng);
+        let mut witness_vectors = witness_vectors(range, alpha);
         let xor_table = XORTable::<Scalar>::precompute();
-        let ti = xor_table.compress(α);
-        let fi = compress_witness(a, b, c, α);
-        let gi = compress_witness(a, b, d, α);
+        let ti = xor_table.compress(alpha);
 
-        assert!(ti.contains(&fi));
-        assert!(!ti.contains(&gi))
+        assert!(witness_vectors.iter().all(|vector| ti.contains(&vector)));
+        witness_vectors[0] += Scalar::one();
+        assert!(!witness_vectors.iter().all(|vector| ti.contains(&vector)));
     }
 }

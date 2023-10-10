@@ -1,4 +1,4 @@
-use rand::{rngs::OsRng, seq::IteratorRandom};
+use rand::rngs::OsRng;
 use zkstd::common::FftField;
 
 pub(crate) struct Polynomial<F: FftField> {

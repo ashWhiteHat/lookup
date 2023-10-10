@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 mod inner_product;
 mod kate_commitment;
 mod lookup;
