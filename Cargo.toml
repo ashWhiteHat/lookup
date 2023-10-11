@@ -9,5 +9,5 @@ zkstd = { version = "0.0.21", default-features = false }
 rand = { version = "0.8" }
 
 [dev-dependencies]
-bls-12-381 = { version = "0.0.21", default-features = false }
-ec-pairing = { version = "0.0.12", default-features = false }
+bls-12-381 = { version = "0.0.22", default-features = false }
+ec-pairing = { version = "0.0.13", default-features = false }

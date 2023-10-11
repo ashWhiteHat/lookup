@@ -1,6 +1,7 @@
 use rand::rngs::OsRng;
 use zkstd::common::FftField;
 
+// first to last, x^0 to x^n-1
 pub(crate) struct Polynomial<F: FftField> {
     pub(crate) coeffs: Vec<F>,
 }
@@ -42,6 +43,15 @@ impl<F: FftField> Polynomial<F> {
     pub(crate) fn scalar(self, scalar: F) -> Self {
         let coeffs = self.coeffs.iter().map(|coeff| *coeff * scalar).collect();
         Self { coeffs }
+    }
+
+    pub(crate) fn evaluate(self, at: F) -> F {
+        let mut acc = F::one();
+        self.coeffs.iter().fold(F::zero(), |sum, coeff| {
+            let tmp = acc;
+            acc *= at;
+            sum + *coeff * tmp
+        })
     }
 }
 
