@@ -45,13 +45,29 @@ impl<F: FftField> Polynomial<F> {
         Self { coeffs }
     }
 
-    pub(crate) fn evaluate(self, at: F) -> F {
+    pub(crate) fn evaluate(&self, at: F) -> F {
         let mut acc = F::one();
         self.coeffs.iter().fold(F::zero(), |sum, coeff| {
             let tmp = acc;
             acc *= at;
             sum + *coeff * tmp
         })
+    }
+
+    pub(crate) fn divide(&self, at: &F) -> Self {
+        let mut coeffs = self
+            .coeffs
+            .iter()
+            .rev()
+            .scan(F::zero(), |w, coeff| {
+                let tmp = *w + coeff;
+                *w = tmp * at;
+                Some(tmp)
+            })
+            .collect::<Vec<_>>();
+        coeffs.pop();
+        coeffs.reverse();
+        Self { coeffs }
     }
 }
 
