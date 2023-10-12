@@ -1,11 +1,24 @@
 use crate::inner_product::Polynomial;
 
-use zkstd::behave::{CurveGroup, FftField, Group, Pairing};
+use zkstd::behave::{CurveGroup, FftField, Pairing};
 
 pub(crate) struct Proof<P: Pairing> {
-    a: P::G2Affine,
-    b: P::G1Affine,
+    a: P::G1Affine,
+    b: P::G2Affine,
     c: P::G1Affine,
+}
+
+impl<P: Pairing> Proof<P> {
+    pub(crate) fn new(a: P::G1Affine, b: P::G2Affine, c: P::G1Affine) -> Self {
+        Self { a, b, c }
+    }
+
+    pub(crate) fn verify(self) -> bool {
+        let Proof { a, b, c } = self;
+        let lhs = P::pairing(a, b);
+        let rhs = P::pairing(c, P::G2Affine::ADDITIVE_GENERATOR);
+        lhs == rhs
+    }
 }
 
 pub(crate) struct KateCommitment<P: Pairing> {
@@ -41,20 +54,13 @@ impl<P: Pairing> KateCommitment<P> {
     pub(crate) fn get_h(&self) -> P::G2Affine {
         self.h
     }
-
-    pub(crate) fn verify(&self, proof: Proof<P>) -> bool {
-        let Proof { a, b, c } = proof;
-        let lhs = P::pairing(b, a);
-        let rhs = P::pairing(c, self.h);
-        lhs == rhs
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::{KateCommitment, Polynomial, Proof};
 
-    use bls_12_381::{Fr as Scalar, G1Projective as G1, G2Projective as G2};
+    use bls_12_381::{Fr as Scalar, G1Affine as G1, G2Affine as G2};
     use ec_pairing::TatePairing;
     use rand::rngs::OsRng;
     use zkstd::behave::{CurveAffine, CurveGroup, Group, Pairing};
@@ -85,27 +91,31 @@ mod tests {
         let r = Scalar::random(OsRng);
         let (poly, pp) = sample_data::<TatePairing>(r);
 
-        // verifier sampling
+        // verifier
         let b = Scalar::random(OsRng);
 
-        // prover evaluation
-        // evaluate with f(b)
-        let c = poly.evaluate(b);
-        // compute quotient polynomial f(x) - f(b) / x - c
-        let q_poly = poly.divide(&c);
-        // commit quotient polynomial
-        let j = pp.commit(&q_poly);
-        // x - c
-        let g2_c = c * G2::ADDITIVE_GENERATOR;
+        // prover
+        // 1. params computation
+
+        // f(b): evaluate at b
+        let b_eval = poly.evaluate(b);
+        // q(x): compute quotient f(x) - f(b) / x - b
+        let q_poly = poly.divide(&b);
+        let b_g2 = G2::ADDITIVE_GENERATOR * b;
         let h = pp.get_h();
-        let i = (h - g2_c).into();
-        // f(x) - c
-        let p_c = pp.commit(&poly);
-        let g1_c = c * G1::ADDITIVE_GENERATOR;
-        let k = (p_c - g1_c).into();
 
-        let proof = Proof { a: i, b: j, c: k };
+        // 2. generate proof
 
-        assert!(pp.verify(proof))
+        // a - b
+        let a = pp.commit(&q_poly);
+        // commit q(a)
+        let b = (h - b_g2).into();
+        // f(a) - f(b)
+        let c = (pp.commit(&poly) - G1::ADDITIVE_GENERATOR * b_eval).into();
+
+        let proof: Proof<TatePairing> = Proof::new(a, b, c);
+
+        // 3. proof verification
+        assert!(proof.verify())
     }
 }
