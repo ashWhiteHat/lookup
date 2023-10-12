@@ -153,10 +153,12 @@ mod tests {
     use rand::rngs::OsRng;
     use zkstd::behave::{Group, PrimeField};
 
-    fn arb_poly(k: u32) -> Vec<Scalar> {
-        (0..(1 << k))
-            .map(|_| Scalar::random(OsRng))
-            .collect::<Vec<Scalar>>()
+    fn arb_poly(k: u32) -> Polynomial<Scalar> {
+        Polynomial {
+            coeffs: (0..(1 << k))
+                .map(|_| Scalar::random(OsRng))
+                .collect::<Vec<_>>(),
+        }
     }
 
     fn naive_multiply<F: PrimeField>(a: Vec<F>, b: Vec<F>) -> Vec<F> {
@@ -184,8 +186,7 @@ mod tests {
 
     #[test]
     fn fft_transformation_test() {
-        let coeffs = arb_poly(10);
-        let mut poly_a = Polynomial { coeffs };
+        let mut poly_a = arb_poly(10);
         let poly_b = poly_a.clone();
         let classic_fft = Fft::new(10);
 
@@ -202,13 +203,40 @@ mod tests {
         let fft = Fft::new(5);
         let poly_c = coeffs_a.clone();
         let poly_d = coeffs_b.clone();
-        let mut poly_a = Polynomial { coeffs: coeffs_a };
-        let mut poly_b = Polynomial { coeffs: coeffs_b };
+        let mut poly_a = coeffs_a;
+        let mut poly_b = coeffs_b;
         let poly_g = poly_a.clone();
         let poly_h = poly_b.clone();
 
         let poly_e = Polynomial {
-            coeffs: naive_multiply(poly_c, poly_d),
+            coeffs: naive_multiply(poly_c.coeffs, poly_d.coeffs),
+        };
+
+        fft.dft(&mut poly_a);
+        fft.dft(&mut poly_b);
+        let mut poly_f = point_mutiply(poly_a, poly_b);
+        fft.idft(&mut poly_f);
+
+        let poly_i = fft.poly_mul(poly_g, poly_h);
+
+        assert_eq!(poly_e, poly_f);
+        assert_eq!(poly_e, poly_i)
+    }
+
+    #[test]
+    fn inverse_fft_multiplication_test() {
+        let coeffs_a = arb_poly(4);
+        let coeffs_b = arb_poly(4);
+        let fft = Fft::new(5);
+        let poly_c = coeffs_a.clone();
+        let poly_d = coeffs_b.clone();
+        let mut poly_a = coeffs_a;
+        let mut poly_b = coeffs_b;
+        let poly_g = poly_a.clone();
+        let poly_h = poly_b.clone();
+
+        let poly_e = Polynomial {
+            coeffs: naive_multiply(poly_c.coeffs, poly_d.coeffs),
         };
 
         fft.dft(&mut poly_a);

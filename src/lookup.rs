@@ -1,3 +1,6 @@
+//! plookup protocol
+//! https://eprint.iacr.org/2020/315.pdf#page=6
+use rand::rngs::OsRng;
 use zkstd::common::PrimeField;
 
 mod table;
@@ -18,6 +21,10 @@ impl<F: PrimeField> Lookup<F> {
     pub(crate) fn prove(&self, alpha: F, table: XORTable<F>) {
         let f = self.compress(alpha);
         let t = table.compress(alpha);
+        let mut s = [f, t].concat();
+        s.sort();
+        let (h1, h2) = s.split_at(s.len() / 2);
+        let (β, y) = (F::random(OsRng), F::random(OsRng));
     }
 
     fn compress(&self, alpha: F) -> Vec<F> {
