@@ -54,7 +54,7 @@ impl<P: Pairing> KateCommitment<P> {
 mod tests {
     use super::{KateCommitment, Polynomial, Proof};
 
-    use bls_12_381::{Fr as Scalar, G1Projective as Point};
+    use bls_12_381::{Fr as Scalar, G1Projective as G1, G2Projective as G2};
     use ec_pairing::TatePairing;
     use rand::rngs::OsRng;
     use zkstd::behave::{CurveAffine, CurveGroup, Group, Pairing};
@@ -76,26 +76,35 @@ mod tests {
         let commitment = pp.commit(&poly);
         let eval = poly.evaluate(r);
 
-        assert_eq!(commitment.to_extended(), eval * Point::ADDITIVE_GENERATOR)
+        assert_eq!(commitment.to_extended(), eval * G1::ADDITIVE_GENERATOR)
     }
 
     #[test]
     fn kzg_test() {
+        // setup params
         let r = Scalar::random(OsRng);
-        let c = Scalar::random(OsRng);
         let (poly, pp) = sample_data::<TatePairing>(r);
-        let q_poly = poly.divide(&c);
-        let e_eval = poly.evaluate(c);
-        let h = pp.get_h();
 
-        let a = c * h;
-        let b = pp.commit(&q_poly);
-        let c = pp.commit(&poly) - e_eval * Point::ADDITIVE_GENERATOR;
-        let proof = Proof {
-            a: a.into(),
-            b,
-            c: c.into(),
-        };
+        // verifier sampling
+        let b = Scalar::random(OsRng);
+
+        // prover evaluation
+        // evaluate with f(b)
+        let c = poly.evaluate(b);
+        // compute quotient polynomial f(x) - f(b) / x - c
+        let q_poly = poly.divide(&c);
+        // commit quotient polynomial
+        let j = pp.commit(&q_poly);
+        // x - c
+        let g2_c = c * G2::ADDITIVE_GENERATOR;
+        let h = pp.get_h();
+        let i = (h - g2_c).into();
+        // f(x) - c
+        let p_c = pp.commit(&poly);
+        let g1_c = c * G1::ADDITIVE_GENERATOR;
+        let k = (p_c - g1_c).into();
+
+        let proof = Proof { a: i, b: j, c: k };
 
         assert!(pp.verify(proof))
     }

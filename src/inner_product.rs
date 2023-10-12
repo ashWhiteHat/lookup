@@ -2,6 +2,7 @@ use rand::rngs::OsRng;
 use zkstd::common::FftField;
 
 // first to last, x^0 to x^n-1
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Polynomial<F: FftField> {
     pub(crate) coeffs: Vec<F>,
 }
@@ -78,6 +79,17 @@ mod tests {
     use bls_12_381::Fr as Scalar;
     use zkstd::common::{Group, PrimeField};
 
+    fn poly_mul<F: FftField>(a: &Polynomial<F>, b: &Polynomial<F>) -> Polynomial<F> {
+        let size = a.coeffs.len() + b.coeffs.len() - 1;
+        let mut coeffs = (0..size).map(|_| F::zero()).collect::<Vec<_>>();
+        for (i, ac) in a.coeffs.iter().enumerate() {
+            for (j, bc) in b.coeffs.iter().enumerate() {
+                coeffs[i + j] += *ac * *bc;
+            }
+        }
+        Polynomial { coeffs }
+    }
+
     #[test]
     fn inner_product_proof_test() {
         // setup
@@ -101,7 +113,7 @@ mod tests {
     }
 
     #[test]
-    fn polynomial_ops_test() {
+    fn inner_product_test() {
         let k = 8;
         let a_poly = Polynomial::<Scalar>::random(k);
         let b_poly = Polynomial::<Scalar>::random(k);
@@ -112,5 +124,25 @@ mod tests {
         let half_product = alo.inner_product(&blo) + ahi.inner_product(&bhi);
 
         assert_eq!(naive_product, half_product)
+    }
+
+    #[test]
+    fn multiplication_test() {
+        let k = 3;
+        let r = Scalar::random(OsRng);
+        let coeffs = (0..1 << k)
+            .map(|_| Scalar::random(OsRng))
+            .collect::<Vec<_>>();
+        let factor_coeffs = vec![-r, Scalar::one()];
+        let a = Polynomial { coeffs };
+        let b = Polynomial {
+            coeffs: factor_coeffs,
+        };
+        // a * b
+        let c = poly_mul(&a, &b);
+        // a * b / b
+        let d = c.divide(&r);
+
+        assert_eq!(a, d);
     }
 }
