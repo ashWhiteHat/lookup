@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-
+mod fft;
 mod inner_product;
 mod kate_commitment;
 mod lookup;

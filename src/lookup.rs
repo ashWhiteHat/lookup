@@ -2,6 +2,8 @@ use zkstd::common::PrimeField;
 
 mod table;
 
+use table::XORTable;
+
 pub(crate) struct Lookup<F: PrimeField> {
     a: Vec<F>,
     b: Vec<F>,
@@ -11,6 +13,21 @@ pub(crate) struct Lookup<F: PrimeField> {
 impl<F: PrimeField> Lookup<F> {
     pub(crate) fn new(a: Vec<F>, b: Vec<F>, c: Vec<F>) -> Self {
         Self { a, b, c }
+    }
+
+    pub(crate) fn prove(&self, alpha: F, table: XORTable<F>) {
+        let f = self.compress(alpha);
+        let t = table.compress(alpha);
+    }
+
+    fn compress(&self, alpha: F) -> Vec<F> {
+        let alpha2 = alpha.square();
+        self.a
+            .iter()
+            .zip(self.b.iter())
+            .zip(self.c.iter())
+            .map(|((t1, t2), t3)| *t1 + alpha * t2 + alpha2 * t3)
+            .collect()
     }
 }
 

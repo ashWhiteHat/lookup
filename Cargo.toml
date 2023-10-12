@@ -7,6 +7,7 @@ edition = "2021"
 poly-commit = { version = "0.0.12", default-features = false }
 zkstd = { version = "0.0.21", default-features = false }
 rand = { version = "0.8" }
+rayon = { version = "1.5.1" }
 
 [dev-dependencies]
 bls-12-381 = { version = "0.0.22", default-features = false }
