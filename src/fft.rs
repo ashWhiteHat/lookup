@@ -184,6 +184,17 @@ mod tests {
         }
     }
 
+    fn coeffs_to_evals<F: FftField>(a: Polynomial<F>) -> Polynomial<F> {
+        Polynomial {
+            coeffs: (0..a.coeffs.len())
+                .map(|i| {
+                    let at = F::from(i as u64);
+                    a.evaluate(at)
+                })
+                .collect(),
+        }
+    }
+
     #[test]
     fn fft_transformation_test() {
         let mut poly_a = arb_poly(10);
@@ -224,29 +235,17 @@ mod tests {
     }
 
     #[test]
-    fn inverse_fft_multiplication_test() {
-        let coeffs_a = arb_poly(4);
-        let coeffs_b = arb_poly(4);
-        let fft = Fft::new(5);
-        let poly_c = coeffs_a.clone();
-        let poly_d = coeffs_b.clone();
-        let mut poly_a = coeffs_a;
-        let mut poly_b = coeffs_b;
-        let poly_g = poly_a.clone();
-        let poly_h = poly_b.clone();
+    fn inverse_fft_evaluation_test() {
+        let k = 4;
+        let n = 1 << k;
+        let evals_a = coeffs_to_evals(arb_poly(k));
+        let evals_b = coeffs_to_evals(arb_poly(k));
+        let fft = Fft::new((k + 1) as usize);
+        let mut evals_a_prime = evals_a.clone();
+        let mut evals_b_prime = evals_b.clone();
+        fft.idft(&mut evals_a_prime);
+        fft.idft(&mut evals_b_prime);
 
-        let poly_e = Polynomial {
-            coeffs: naive_multiply(poly_c.coeffs, poly_d.coeffs),
-        };
-
-        fft.dft(&mut poly_a);
-        fft.dft(&mut poly_b);
-        let mut poly_f = point_mutiply(poly_a, poly_b);
-        fft.idft(&mut poly_f);
-
-        let poly_i = fft.poly_mul(poly_g, poly_h);
-
-        assert_eq!(poly_e, poly_f);
-        assert_eq!(poly_e, poly_i)
+        assert!((0..n).all(|i| evals_a_prime.evaluate(fft.twiddle_factors[i]) == evals_a.coeffs[i]));
     }
 }
