@@ -1,6 +1,8 @@
 use rand::rngs::OsRng;
 use zkstd::common::FftField;
 
+use crate::fft::Fft;
+
 // first to last, x^0 to x^n-1
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Polynomial<F: FftField> {
@@ -69,6 +71,12 @@ impl<F: FftField> Polynomial<F> {
         coeffs.pop();
         coeffs.reverse();
         Self { coeffs }
+    }
+
+    pub(crate) fn from_evals(evals: Vec<F>, fft: Fft<F>) -> Self {
+        let mut coeffs = Self { coeffs: evals };
+        fft.idft(&mut coeffs);
+        coeffs
     }
 }
 

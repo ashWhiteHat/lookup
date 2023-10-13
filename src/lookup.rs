@@ -5,6 +5,7 @@ use zkstd::common::{FftField, PrimeField};
 
 mod table;
 
+use crate::{fft::Fft, inner_product::Polynomial};
 use table::XORTable;
 
 pub(crate) struct Lookup<F: FftField> {
@@ -26,6 +27,16 @@ impl<F: FftField> Lookup<F> {
         let (h1, h2) = s.split_at(s.len() / 2);
         let (β, y) = (F::random(OsRng), F::random(OsRng));
         let z = compute_z(β, y, f, t, h1.to_vec(), h2.to_vec());
+
+        let n = t.len().next_power_of_two();
+        let k = n.trailing_zeros();
+        let fft: Fft<F> = Fft::new(k as usize);
+        let f_poly = Polynomial::from_evals(f, fft);
+        let t_poly = Polynomial::from_evals(t, fft);
+        let h1_poly = Polynomial::from_evals(h1.to_vec(), fft);
+        let h2_poly = Polynomial::from_evals(h2.to_vec(), fft);
+        let z_poly = Polynomial::from_evals(z, fft);
+        let q_poly = compute_q(f_poly, t_poly, h1_poly, h2_poly, z_poly, β, y);
     }
 
     fn compress(&self, alpha: F) -> Vec<F> {
@@ -67,6 +78,17 @@ fn compute_g<F: FftField>(i: usize, one_β: F, β: F, y: F, h1: &Vec<F>, h2: &Ve
     let left = randomly_linear_combination(one_β, β, y, h1[i], h1[i + 1]);
     let right = randomly_linear_combination(one_β, β, y, h2[i], h2[i + 1]);
     left * right
+}
+
+fn compute_q<F: FftField>(
+    f: Polynomial<F>,
+    t: Polynomial<F>,
+    h1: Polynomial<F>,
+    h2: Polynomial<F>,
+    z: Polynomial<F>,
+    β: F,
+    y: F,
+) -> F {
 }
 
 // λ(1 + β) + a_i + β a_i_1
